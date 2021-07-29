@@ -1,0 +1,369 @@
+  
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>方案列表</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="./layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="./layuiadmin/style/admin.css" media="all">
+    <style>
+        .layui-table-cell {
+            height: 60px;
+            line-height: 60px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="layui-fluid">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto">
+        <div class="layui-form-item">
+            <div class="layui-finline">
+                <label class="layui-form-label">方案名称</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="name" placeholder="请输入" autocomplete="off" class="layui-input"
+                           id="search_name">
+                </div>
+            </div>
+            <div class="layui-inline">
+                <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-app-contlist-search"
+                        id="do_search">
+                    <i style="top: -2px;" class="layui-icon layui-icon-search layuiadmin-button-btn"></i> 搜索
+                </button>
+            </div>
+        </div>
+
+        <!--工具栏 START-->
+        <div class="layui-form-item">
+            <div class="layui-inline">
+
+                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="add-program">
+                    <i style="top: -2px;" class="layui-icon layuiadmin-button-btn">&#xe61f;</i> 添加方案
+                </button>
+                <button class="layui-btn  layui-btn-primary" lay-submit lay-filter="">
+                    <i style="top: -2px;" class="layui-icon layuiadmin-button-btn">&#xe601;</i> 导出
+                </button>
+            </div>
+        </div>
+        <!--工具栏 END-->
+    </div>
+
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">方案列表
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="table-body" lay-filter="table-body"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--操作-->
+<script type="text/html" id="operation-list">
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="score"><i
+            class="layui-icon layui-icon-edit"></i>评分</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="view"><i
+            class="layui-icon">&#xe655;</i>查看</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete"><i
+            class="layui-icon layui-icon-delete"></i>删除</a>
+</script>
+
+
+<script src="./layuiadmin/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: './layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'table', 'labUtil'], function () {
+        var table = layui.table
+            , util = layui.labUtil
+            , form = layui.form
+            , $ = layui.jquery;
+        //toolbar溢出，正确绑定按钮事件
+        $(document).off('mousedown','.layui-table-grid-down').
+        on('mousedown','.layui-table-grid-down',function (event) {
+            table._tableTrCurrr = $(this).closest('td');
+        });
+        $(document).off('click','.layui-table-tips-main [lay-event]').
+        on('click','.layui-table-tips-main [lay-event]',function (event) {
+            var elem = $(this);
+            var tableTrCurrr =  table._tableTrCurrr;
+            if(!tableTrCurrr){
+                return;
+            }
+            var layerIndex = elem.closest('.layui-table-tips').attr('times');
+            console.log(layerIndex);
+            layer.close(layerIndex);
+            table._tableTrCurrr.find('[lay-event="' + elem.attr('lay-event') +           '"]').children("i").first().click();
+        });
+        // //监听搜索
+        // form.on('submit(LAY-app-contlist-search)', function (data) {
+        //     var field = data.field;
+        //     // layer.msg(JSON.stringify(data.field));
+        //
+        //     //执行重载
+        //     table.reload('table-body', {
+        //         where: field
+        //     });
+        // });
+
+        //监听添加随访按钮
+        form.on('submit(add-program)', function (data) {
+            console.log(table)
+            layer.open({
+                type: 2
+                , title: '添加方案'
+                , content: './program.html'  //加入其他限定条件
+                , maxmin: false
+                , area: ['90%', '90%'] //弹出时就最大
+                , btn: ['保存', '取消']
+                , yes: function (index, layero) {
+                    var iframeWindow = window['layui-layer-iframe' + index]
+                        , submit = layero.find('iframe').contents().find("#form-edit");
+
+                    //监听提交
+                    iframeWindow.layui.form.on('submit(form-edit)', function (data) {
+                        var field = data.field; //获取提交的字段
+
+                        if (field.level_index < 0) {
+                            layer.msg("请选择评价指标");
+                            return;
+                        }
+                        if (field.detail_img == "") {
+                            layer.msg("请上传图片");
+                            return;
+                        }
+                        onAdd(field, function () {
+                            layer.msg("添加成功！");
+                            table.reload('table-body');
+                        }, function () {
+                            layer.msg("添加失败！");
+                        });
+
+                        layer.close(index); //关闭弹层
+                    });
+
+                    submit.trigger('click');
+                }
+            });
+        });
+
+        $('#do_search').on('click', function () {
+            var search_name = $('#search_name').val();
+            if (search_name != "") {
+                table.reload(
+                    'table-body', {
+                        page: {
+                            curr: 1 //重新从第 1 页开始
+                        }
+                        , url: 'http://127.0.0.1:8081/programs/Search' //模拟接口
+                        , headers: {
+                            "Authorization": localStorage.getItem("prog_token") || "",
+                        },
+                        where: {
+                            prog_name: search_name,
+                        }
+                        , parseData: function (res) { //res 即为原始返回的数据
+                            return {
+                                "code": res.errcode, //解析接口状态
+                                "msg": res.errmsg, //解析提示文本
+                                "count": res.list_count, //解析数据长度
+                                "data": res.results //解析数据列表
+                            };
+                        }
+                    }
+                );
+            } else {
+                table.reload(
+                    'table-body', {
+                        page: {
+                            curr: 1 //重新从第 1 页开始
+                        }
+                        , url: 'http://127.0.0.1:8081/programs/list' //模拟接口
+                        , headers: {
+                            "Authorization": localStorage.getItem("prog_token") || "",
+                        }
+                        , parseData: function (res) { //res 即为原始返回的数据
+                            return {
+                                "code": res.errcode, //解析接口状态
+                                "msg": res.errmsg, //解析提示文本
+                                "count": res.list_count, //解析数据长度
+                                "data": res.results //解析数据列表
+                            };
+                        }
+                    }
+                );
+            }
+
+        })
+        //加载表格
+        table.render({
+            elem: '#table-body'
+            , url: 'http://127.0.0.1:8081/programs/list' //模拟接口
+            , headers: {
+                "Authorization": localStorage.getItem("prog_token") || "",
+            }
+            , parseData: function (res) { //res 即为原始返回的数据
+                return {
+                    "code": res.errcode, //解析接口状态
+                    "msg": res.errmsg, //解析提示文本
+                    "count": res.list_count, //解析数据长度
+                    "data": res.results //解析数据列表
+                };
+            }
+            , cols: [[
+                {field: 'id', title: '方案ID', sort: true},
+                {field: 'name', title: '方案名称', sort: true}
+                , {
+                    field: 'detail_img', title: '图片', templet: function (d) {
+                        return '<a href="' + d.detail_img + '" target="_blank">' +
+                            '<img style="height: 50px;" title="点击查看" src="' + d.detail_img + '"/>' +
+                            '</a>'
+                    }
+                }
+                , {field: 'detail', title: '方案简介', sort: true}
+                , {field: 'level_index', title: '评价指标', sort: true}
+                , {
+                    field: 'total_score', title: '总分', sort: true, templet: function (d) {
+                        return d.total_score == "" ? "<span style='color:red'>未评分</span>" : d.total_score;
+                    }
+                }
+                , {title: '操作', align: 'center', fixed: 'right', toolbar: '#operation-list'}
+            ]]
+            , page: true,
+            limit: 20
+        });
+
+        //监听工具条
+        table.on('tool(table-body)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'delete') {
+                layer.confirm("确认删除‘" + data.name + "’吗?", function (index) {
+                    onDelete(data, function () {
+                        // 后台删除完成以后，更新前端的数据显示，这里直接删除这行数据
+                        obj.del();
+                        layer.msg("删除成功！");
+                    }, function () {
+                        layer.msg("删除失败！");
+                    });
+
+                    layer.close(index);
+                });
+            }
+            // 随访报告页编辑
+            else if (obj.event === 'view') {
+                layer.open({
+                    type: 2
+                    , title: '查看'
+                    , content: './program.html?id=' + data.id
+                    , maxmin: false
+                    , area: ['90%', '90%']
+                    , btn: ['取消']
+                });
+            }
+            // 评分
+            else if (obj.event === 'score') {
+                let id = data.id;
+                layer.open({
+                    type: 2
+                    , title: '打分'
+                    , content: './program.html?id=' + data.id
+                    , maxmin: false
+                    , area: ['90%', '90%']
+                    , btn: ['保存', '取消']
+                    , yes: function (index, layero) {
+                        var iframeWindow = window['layui-layer-iframe' + index]
+                            , submit = layero.find('iframe').contents().find("#form-edit")
+
+                        //监听提交
+                        iframeWindow.layui.form.on('submit(form-edit)', function (data) {
+                            var field = data.field;
+
+                            onScore(id, field, function () {
+                                layer.msg("打分成功！");
+                                table.reload('table-body');
+                            });
+
+                            layer.close(index); //关闭弹层
+                        });
+
+                        submit.trigger('click');
+                    }
+                });
+            }
+
+        });
+
+        function onDelete(data, su_callback, er_callback) {
+            $.ajax({
+                url: "http://127.0.0.1:8081/programs/Delete_Program",
+                type: "POST",
+                data: {
+                    post_id: data.id
+                },
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.errcode == 0) {
+                        su_callback();
+                    } else {
+                        er_callback();
+                    }
+                }
+            })
+        }
+
+        function onAdd(data, su_callback, er_callback) {
+            $.ajax({
+                url: "http://127.0.0.1:8081/programs/Post_Program",
+                type: "POST",
+                data: data,
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.errcode == 0) {
+                        su_callback();
+                    } else {
+                        er_callback();
+                    }
+                }
+            })
+        }
+
+        function onScore(id, data, su_callback, er_callback) {
+            $.ajax({
+                url: "http://127.0.0.1:8081/programs/Get_Score",
+                type: "POST",
+                data: {
+                    program_id: id,
+                    score: data.scores
+                },
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.errcode == 0) {
+                        su_callback();
+                    } else {
+                        er_callback();
+                    }
+                }
+            })
+        }
+    });
+</script>
+</body>
+</html>

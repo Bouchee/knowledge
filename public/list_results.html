@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>结果列表</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="./layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="./layuiadmin/style/admin.css" media="all">
+</head>
+<body>
+
+<div class="layui-fluid">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto">
+        <div class="layui-form-item">
+            <div class="layui-finline">
+                <label class="layui-form-label">结果名称</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="name" placeholder="请输入" autocomplete="off" class="layui-input" id="search_name">
+                </div>
+            </div>
+            <div class="layui-inline">
+                <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-app-contlist-search" id="do_search">
+                    <i style="top: -2px;" class="layui-icon layui-icon-search layuiadmin-button-btn"></i> 搜索
+                </button>
+            </div>
+        </div>
+
+        <!--工具栏 START-->
+<!--        <div class="layui-form-item" style="text-align: right">-->
+<!--            <div class="layui-inline">-->
+
+<!--                <button class="layui-btn  layui-btn-primary" lay-submit lay-filter="">-->
+<!--                    <i style="top: -2px;" class="layui-icon layuiadmin-button-btn">&#xe601;</i> 导出-->
+<!--                </button>-->
+<!--            </div>-->
+<!--        </div>-->
+        <!--工具栏 END-->
+    </div>
+
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">结果列表
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="table-body" lay-filter="table-body"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--操作-->
+<script type="text/html" id="operation-list">
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="view"><i
+            class="layui-icon">&#xe655;</i>查看</a>
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="export"><i
+            class="layui-icon">&#xe601;</i>导出</a>
+</script>
+
+<script src="./layuiadmin/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: './layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'table', 'labUtil'], function () {
+        var table = layui.table
+            , util = layui.labUtil
+            , form = layui.form
+            , $ = layui.jquery;
+        //toolbar溢出，正确绑定按钮事件
+        $(document).off('mousedown','.layui-table-grid-down').
+        on('mousedown','.layui-table-grid-down',function (event) {
+            table._tableTrCurrr = $(this).closest('td');
+        });
+        $(document).off('click','.layui-table-tips-main [lay-event]').
+        on('click','.layui-table-tips-main [lay-event]',function (event) {
+            var elem = $(this);
+            var tableTrCurrr =  table._tableTrCurrr;
+            if(!tableTrCurrr){
+                return;
+            }
+            var layerIndex = elem.closest('.layui-table-tips').attr('times');
+            console.log(layerIndex);
+            layer.close(layerIndex);
+            table._tableTrCurrr.find('[lay-event="' + elem.attr('lay-event') +           '"]').children("i").first().click();
+        });
+        // //监听搜索
+        // form.on('submit(LAY-app-contlist-search)', function (data) {
+        //     var field = data.field;
+        //     // layer.msg(JSON.stringify(data.field));
+        //
+        //     //执行重载
+        //     table.reload('table-body', {
+        //         where: field
+        //     });
+        // });
+        $('#do_search').on('click', function () {
+            var search_name = $('#search_name').val();
+            if(search_name!=""){
+                table.reload(
+                'table-body',{
+                page: {
+                    curr: 1 //重新从第 1 页开始
+                  }
+                , url: 'http://127.0.0.1:8081/results/Search' //模拟接口
+                ,headers:{
+                    "Authorization":localStorage.getItem("prog_token")||"",
+                },
+                where:{
+                    prog_level:search_name,
+                }
+                , parseData: function(res){ //res 即为原始返回的数据
+                    return {
+                      "code": res.errcode, //解析接口状态
+                      "msg": res.errmsg, //解析提示文本
+                      "count": res.list_count, //解析数据长度
+                      "data": res.results //解析数据列表
+                    };
+                  }
+                }
+            );
+            }else{
+                table.reload(
+                'table-body',{
+                page: {
+                    curr: 1 //重新从第 1 页开始
+                  }
+                , url: 'http://127.0.0.1:8081/results/list' //模拟接口
+                ,headers:{
+                    "Authorization":localStorage.getItem("prog_token")||"",
+                }
+                , parseData: function(res){ //res 即为原始返回的数据
+                    return {
+                      "code": res.errcode, //解析接口状态
+                      "msg": res.errmsg, //解析提示文本
+                      "count": res.list_count, //解析数据长度
+                      "data": res.results //解析数据列表
+                    };
+                  }
+                }
+            );
+            }
+            
+        })
+        //加载表格
+        table.render({
+            elem: '#table-body'
+            , url: 'http://127.0.0.1:8081/results/list' //模拟接口
+            ,headers:{
+                "Authorization":localStorage.getItem("prog_token")||"",
+            }
+            , parseData: function(res){ //res 即为原始返回的数据
+                return {
+                  "code": res.errcode, //解析接口状态
+                  "msg": res.errmsg, //解析提示文本
+                  "count": res.list_count, //解析数据长度
+                  "data": res.results //解析数据列表
+                };
+              }
+            , cols: [[
+                {field: 'level_index', title: '指标ID', sort: true}
+                , {field: 'name', title: '最优方案', sort: true}
+                , {field: 'id', title: '方案ID', sort: true}
+                , {field: 'total_score', title: '方案分数', sort: true}
+                , {title: '操作', align: 'center', fixed: 'right', toolbar: '#operation-list'}
+            ]]
+            , page: true
+        });
+
+        //监听工具条
+        table.on('tool(table-body)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'view') {
+                layer.open({
+                    type: 2
+                    , title: '查看结果'
+                    , content: './result.html?id=' + data.level_index
+                    , maxmin: false
+                    , area: ['90%', '90%'] //弹出时就最大
+                    , btn: ['取消']
+                });
+            }
+            // 肺功能页编辑
+            else if (obj.event === 'export') {
+                layer.alert("导出功能待需求确定后完成！")
+                return;
+                // layer.open({
+                //     type: 2
+                //     , title: '编辑'
+                //     , content: './follow_lungs.html?id=' + data.id
+                //     , maxmin: false
+                //     , area: ['100%', '100%'] //弹出时就最大
+                //     , btn: ['确定', '取消']
+                //     , yes: function (index, layero) {
+                //         var iframeWindow = window['layui-layer-iframe' + index]
+                //             , submit = layero.find('iframe').contents().find("#lungs-form-edit")
+                //             , followId = data.id;
+                //
+                //         //监听提交
+                //         iframeWindow.layui.form.on('submit(lungs-form-edit)', function (data) {
+                //             // 赋值followId，供后台更新使用
+                //             data.field.followId = followId;
+                //             var field = data.field; //获取提交的字段
+                //             onLungsSubmit(field, function () {
+                //                 layer.msg("更新成功！");
+                //                 table.reload('table-body');
+                //             });
+                //
+                //             layer.close(index); //关闭弹层
+                //         });
+                //
+                //         submit.trigger('click');
+                //     }
+                // });
+            }
+        });
+
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>详情页</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="./layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="./layuiadmin/style/admin.css" media="all">
+    <style>
+        .layui-table-cell {
+            height: 40px;
+            line-height: 40px;
+        }
+    </style>
+</head>
+<body>
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space10">
+        
+        <div class="layui-col-md12" id="lungsInfo">
+            <div class="layui-card">
+                <div class="layui-card-header">指标信息</div>
+                <div class="layui-card-body" style="padding: 15px;">
+                    <!--                    <form class="layui-form" action="" lay-filter="image-form" id="patient-form">-->
+                    <fieldset class="layui-elem-field">
+                        <legend>指标列表</legend>
+                        <div class="layui-field-box" id="norm-form">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">指标1</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="norm1" id="norm1" placeholder="请输入指标名称"
+                                           class="layui-input">
+                                </div>
+                                <div class="layui-input-inline">
+                                    <button class="layui-btn layui-btn-normal" id="add-norm">
+                                        <i class="layui-icon">&#xe61f;</i> 添加指标
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">指标2</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="norm2" id="norm2" placeholder="请输入指标名称"
+                                           autocomplete="off"
+                                           class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="layui-elem-field">
+                        <legend>指标权重矩阵</legend>
+                        <div class="layui-field-box">
+                            <div class="layui-form-item layui-form-text">
+                                <table class="layui-table" id="matrix-table">
+                                </table>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                   
+                    <div class="layui-form-item" style="text-align: right">
+                        <input type="button" lay-submit lay-filter="form-edit" id="form-edit"
+                               value="保存" class="layui-btn layui-btn-normal">
+                    </div>
+                    <!--                    </form>-->
+                </div>
+            </div>
+        </div>
+      
+    </div>
+</div>
+
+
+<script src="./layuiadmin/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: './layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'form', 'labUtil', 'laydate', 'upload', 'table'], function () {
+        var form = layui.form
+            , layer = layui.layer
+            , table = layui.table
+            , util = layui.labUtil
+            , laydate = layui.laydate
+            , upload = layui.upload
+            , $ = layui.jquery;
+
+        // 获取打开页面前的参数
+        var id = util.getParams('id');
+
+        var html = [];
+        html.push("<div class=\"layui-form-item\">");
+        html.push(" <label class=\"layui-form-label\">指标</label>");
+        html.push(" <div class=\"layui-input-inline\">");
+        html.push("     <input type=\"text\" name=\"norm\" placeholder=\"请输入指标名称\" class=\"layui-input\"");
+        html.push(" </div>");
+        html.push("</div>");
+
+        // showPatient(followId);
+
+        var normIndex = 3;
+        $("#add-norm").click(function () {
+            var container = $("#norm-form")
+            var inputHTML = html.join("");
+            var input = $(inputHTML);
+            input.find('label').text("指标" + normIndex);
+            input.find('div input').attr({
+                name: "norm" + normIndex,
+                id: "norm" + normIndex
+            })
+            input.change(function () {
+                rePaintMatrix()
+            });
+            container.append(input)
+            normIndex++
+            // form.render();
+
+            rePaintMatrix()
+        });
+
+        $(".layui-input").change(function () {
+            rePaintMatrix()
+        });
+
+        function getNorms() {
+            var normArray = [];
+            $("#norm-form").find("input").each(function (index, input) {
+                normArray.push($(input).val());
+            });
+            return normArray;
+        }
+
+        function getMatrix() {
+            var matrix = [];
+            $(".layui-table").find("input").each(function (index, input) {
+                matrix.push($(input).val());
+            });
+            return matrix;
+        }
+
+        // normArray: ['外观', '颜色‘, ... ]
+        function rePaintMatrix() {
+            // 构造normArray
+            var normArray = getNorms();
+
+            var cols = [{field: 'first', title: '指标名\\指标名'}];
+            var data = [];
+            // 列
+            $.each(normArray, function (index, item) {
+                cols.push({
+                    field: 'norm' + (index + 1)
+                    , title: item
+                    , templet: function (d) {
+                        return "<input class='layui-input' type='number'>"
+                    }
+                })
+                data.push({
+                    'first': item
+                })
+            });
+
+            //展示已知数据
+            table.render({
+                elem: '#matrix-table'
+                , cols: [cols]
+                , data: data
+            });
+        }
+
+        $("#form-edit").click(function () {
+            var normArray = getNorms();
+            var matrix = getMatrix();
+            if (matrix.length != normArray.length * normArray.length) {
+                layer.msg("请把矩阵填写完整后再提交");
+                return;
+            }
+            $.ajax({
+                url: "http://127.0.0.1:8081/norms/Post_Norm",
+                type: "POST",
+                data: {
+                    names: normArray.toString()
+                    , matrix: matrix.toString()
+                },
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.errcode == 0) {
+                        layer.msg("更新成功！");
+                        location.href = "list_norms.html"
+                    } else {
+                        er_callback();
+                    }
+                }
+            });
+        });
+    })
+</script>
+</body>
+</html>

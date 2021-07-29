@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>详情页</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="./layuiadmin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="./layuiadmin/style/admin.css" media="all">
+    <style>
+        .layui-table-cell {
+            height: 45px;
+            line-height: 45px;
+        }
+    </style>
+</head>
+<body>
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space10">
+        
+        <div class="layui-col-md12" id="lungsInfo">
+            <div class="layui-card">
+                <div class="layui-card-header">方案信息</div>
+                <div class="layui-card-body" style="padding: 15px;">
+                    <form class="layui-form" action="" lay-filter="program-form" id="program-form">
+                       
+                        <fieldset class="layui-elem-field">
+                            <legend>方案基础信息</legend>
+                            <div class="layui-field-box">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">方案名称</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" name="name" id="name" placeholder="请输入方案名称"
+                                               autocomplete="off"
+                                               class="layui-input" required lay-verify="required">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">方案简介</label>
+                                    <div class="layui-input-block">
+                                        <textarea name="detail" id="detail" placeholder="请输入方案简介"
+                                                  class="layui-textarea"></textarea>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">评价指标</label>
+                                    <div class="layui-input-block">
+                                        <select name="level_index" id="level_index">
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                      
+                        <fieldset class="layui-elem-field">
+                            <legend>方案图片</legend>
+                            <div class="layui-field-box">
+                                <!--<div class="layui-form-item">
+                                    <label class="layui-form-label"></label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" name="" autocomplete="off" class="layui-input">
+                                    </div>
+                                    <div class="layui-form-mid"></div>
+                                    <div class="layui-form-mid layui-word-aux"></div>
+                                </div>-->
+                                <!--上传START-->
+                                <div class="layui-upload">
+                                    <button type="button" class="layui-btn" id="test1">上传图片</button>
+                                    <div class="layui-upload-list">
+                                        <img class="layui-upload-img" id="demo1" style="max-width:1000px;">
+                                        <p id="demoText"></p>
+                                        <input type="hidden" name="detail_img" id="fileUrl">
+                                    </div>
+                                </div>
+                                <!--上传END-->
+                            </div>
+                        </fieldset>
+                        <fieldset class="layui-elem-field" id="score-set">
+                            <legend>评分详情</legend>
+                            <div class="layui-field-box">
+                                <table class="layui-table" lay-size="lg" id="demo"></table>
+                            </div>
+                        </fieldset>
+
+                        <div class="layui-form-item layui-hide">
+                            <input type="hidden" name="scores" id="scores"/>
+                            <input type="button" lay-submit lay-filter="form-edit" id="form-edit"
+                                   value="确认编辑">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+      
+    </div>
+</div>
+
+<script src="./layuiadmin/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: './layuiadmin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'form', 'labUtil', 'laydate', 'upload', 'table', 'rate'], function () {
+        var form = layui.form
+            , layer = layui.layer
+            , util = layui.labUtil
+            , laydate = layui.laydate
+            , upload = layui.upload
+            , $ = layui.jquery
+            , table = layui.table
+            , rate = layui.rate
+            , scores = [];      // 打分后传给后端
+
+        // 获取打开页面前的参数
+        var id = util.getParams('id');
+
+        if (id) {
+            // disable
+            $("#name").attr("disabled", true);
+            $("#detail").attr("disabled", true);
+            $("#level_index").attr("disabled", true);
+            showProgram();
+        } else {
+            $("#score-set").hide();
+        }
+
+        //常规使用 - 普通图片上传
+        var uploadInst = upload.render({
+            elem: '#test1'
+            , url: 'http://127.0.0.1:8081/files/Post_Program_Pic'
+            , headers: {
+                "Authorization": localStorage.getItem("prog_token") || ""
+                // , "Content-Type": "multipart/form-data"
+            }
+            , before: function (obj) {
+                //预读本地文件示例，不支持ie8
+                obj.preview(function (index, file, result) {
+                    $('#demo1').attr('src', result); //图片链接（base64）
+                });
+
+                layer.msg('上传中', {icon: 16, time: 0});
+            }
+            , done: function (res) {
+                console.log(res);
+                //如果上传失败
+                if (res.errcode > 0) {
+                    return layer.msg(res.ermsg);
+                }
+                //上传成功的一些操作
+                layer.msg("上传成功")
+                $("#fileUrl").val(res.fileUrl);
+            }
+            , error: function () {
+                return layer.msg('上传失败');
+            }
+        });
+
+        loadLevel();
+        function loadLevel() {
+            $.ajax({
+                url: "http://127.0.0.1:8081/norms/List_Index",
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    let dom = $("#level_index");
+                    let option = $("<option value=-1>请选择</option>");
+                    dom.append(option);
+
+                    $.each(res.results, function (i, item) {
+                        let option = $("<option value=" + item.id + ">" + item.id + "-" + item.name + "</option>");
+                        dom.append(option);
+                    });
+
+                    // layui没有双向绑定机制，需要执行 form.render(type, filter) 方法刷新数据
+                    form.render('select');
+                }
+            });
+        }
+
+        /** 加载详细数据 */
+        function showProgram() {
+            $.ajax({
+                url: "http://127.0.0.1:8081/programs/Program_Detail",
+                data: {
+                    program_id: id
+                },
+                headers: {
+                    "Authorization": localStorage.getItem("prog_token") || "",
+                },
+                success: function (res) {
+                    console.log(res);
+                    if (res.errcode == 0) {
+                        // 基本信息
+                        form.val("program-form", res.program_data);
+                        // 设置图片
+                        $("#demo1").attr("src", res.program_data.detail_img);
+                        // 渲染评分结果
+                        var scoreData = res.data_array
+                        // 打分
+                        if (scoreData[0].score == null || scoreData[0].score === "") {
+                            $.each(scoreData, function (i, item) {
+                                scores.push(0)
+                            });
+                            editRate(scoreData);
+                        } else {
+                            // 查看
+                            viewRate(scoreData);
+                        }
+                    } else {
+                        er_callback();
+                    }
+                }
+            })
+        }
+
+        /** 渲染评分结果 */
+        function editRate(data) {
+            //展示已知数据
+            table.render({
+                elem: '#demo'
+                , cols: [[ //标题栏
+                    {field: 'name', title: '指标名称', width: 220}
+                    , {
+                        field: 'score', title: '指标评分（满分10分）', templet: function (d) {
+                            return "<div name='rate'></div>"
+                        }
+                    }
+                ]]
+                , data: data
+            });
+
+            $.each(data, function (i, item) {
+                //自定义文本
+                rate.render({
+                    elem: document.getElementsByName('rate')[i]
+                    , length: 10
+                    , text: true
+                    , setText: function (value) {
+                        this.span.text(value + '分');
+                    }
+                    ,choose: function(value){
+                        updateScore(i, value)
+                    }
+                })
+            });
+        }
+
+        function updateScore(i, value) {
+            scores[i] = value
+            $("#scores").val(scores.toString())
+        }
+
+        /** 渲染评分结果 */
+        function viewRate(data) {
+            //展示已知数据
+            table.render({
+                elem: '#demo'
+                , cols: [[ //标题栏
+                    {field: 'name', title: '指标名称', width: 220}
+                    , {
+                        field: 'score', title: '指标评分（满分10分）', templet: function (d) {
+                            return "<div name='rate'></div>"
+                        }
+                    }
+                ]]
+                , data: data
+            });
+
+            $.each(data, function (i, item) {
+                //自定义文本
+                rate.render({
+                    elem: document.getElementsByName('rate')[i]
+                    , value: item.score
+                    , length: 10
+                    , text: true
+                    , readonly: true
+                    , setText: function (value) {
+                        this.span.text(value + '分');
+                    }
+                })
+            });
+
+        }
+    })
+</script>
+</body>
+</html>
